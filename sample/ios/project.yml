@@ -20,6 +20,8 @@ targets:
       properties:
         CFBundleDisplayName: permissions-kit
         UILaunchScreen: {}
+        # Compose Multiplatform refuses to start without it: high refresh rates need it on iPhones.
+        CADisableMinimumFrameDurationOnPhone: true
         # One usage description per AppPermission that iOS asks for; without it the app crashes on request.
         NSCameraUsageDescription: The sample shows how the camera permission is requested.
         NSMicrophoneUsageDescription: The sample shows how the microphone permission is requested.
