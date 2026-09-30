@@ -34,16 +34,31 @@ so the same effect is also the first read.
 
 ## Denied or never asked, on Android
 
-Android reports "refused, and I will not ask again" exactly like "never asked": not granted, no rationale.
-ArenaGo told them apart with a `remember`ed flag, lost as soon as the screen left the composition; Act2Act
-compared with the previous status, lost on restart. The kit records every permission it asks for in a
-small `SharedPreferences` file (`RequestLedger`), so `Denied` is right across screens and restarts (D47).
-iOS reports `NotDetermined` itself and needs no record.
+Android reports "refused, and I will not ask again" exactly like "never asked", like a one-time grant
+("Only this time") that has lapsed, and like a permission set to "Ask every time" in settings: not
+granted, no rationale. Only the last three can still be asked. ArenaGo told them apart with a
+`remember`ed flag, lost as soon as the screen left the composition; Act2Act compared with the previous
+status, lost on restart. The first version of the kit recorded every permission it had asked for and
+called any later "not granted, no rationale" `Denied` — wrong after a one-time grant lapsed: the app
+offered settings where the system would simply have asked again.
 
-One case stays ambiguous: on Android 11+ the user can dismiss the dialog without answering, and the next
-read says `Denied` although the system would still ask. So `request()` launches the dialog for every
-permission that is not granted — including `Denied` ones; for a permission really refused for good the
-system answers at once without a dialog.
+So the kit records a **refusal**, not a request (`RequestLedger`, a small `SharedPreferences` file), and
+decides it from how a request ended (D47, refined):
+
+- No dialog at all — the system answered by itself: refused for good. The host activity pauses even
+  then (the system starts and finishes an invisible activity), but for about a tenth of a second; a
+  dialog someone answers keeps it paused far longer, so a pause under 300 ms counts as no dialog.
+- Refused in the dialog after having refused once (`ShouldShowRationale` before): Android's second
+  refusal, final.
+- Anything else — granted (one-time included), a first refusal (a rationale follows), a first dialog
+  dismissed without an answer — is not a refusal, and clears one.
+
+`openSettings()` clears the refusal too: the user may set the permission to "Ask every time" there. If
+they did not, the next `request()` comes back without a dialog and records it again — one tap that shows
+nothing, then `Denied`. iOS reports `NotDetermined` itself and needs no record.
+
+Checked on an Android 15 emulator, before and after: one-time grant lapsed, two refusals, settings set
+to "Ask every time", settings left unchanged, a first dialog dismissed.
 
 ## The photo library on Android
 

@@ -66,7 +66,7 @@ internal object IosPermissionPlatform : PermissionPlatform {
             .forEach { requestOne(it) }
     }
 
-    override fun openSettings() {
+    override fun openSettings(permissions: List<AppPermission>) {
         val url = NSURL.URLWithString(UIApplicationOpenSettingsURLString) ?: return
         UIApplication.sharedApplication.openURL(url, options = emptyMap<Any?, Any?>(), completionHandler = null)
     }

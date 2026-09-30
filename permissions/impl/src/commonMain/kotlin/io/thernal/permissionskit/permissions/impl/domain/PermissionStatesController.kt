@@ -46,6 +46,6 @@ internal class PermissionStatesController(
     }
 
     fun openSettings() {
-        platform.openSettings()
+        platform.openSettings(permissions)
     }
 }

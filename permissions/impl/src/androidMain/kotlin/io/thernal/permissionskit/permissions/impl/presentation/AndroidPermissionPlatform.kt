@@ -11,6 +11,12 @@ import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.TimeSource
 import io.thernal.permissionskit.permissions.api.domain.AppPermission
 import io.thernal.permissionskit.permissions.api.domain.PermissionStatus
 import io.thernal.permissionskit.permissions.impl.domain.PermissionPlatform
@@ -26,10 +32,8 @@ internal class AndroidPermissionPlatform(
         return when {
             manifestPermission != null -> androidPermissionStatus(
                 granted = isGranted(manifestPermission),
-                shouldShowRationale = activity?.let {
-                    ActivityCompat.shouldShowRequestPermissionRationale(it, manifestPermission)
-                } == true,
-                requestedBefore = ledger.wasRequested(manifestPermission),
+                shouldShowRationale = shouldShowRationale(manifestPermission),
+                isRefused = ledger.isRefused(manifestPermission),
             )
 
             // Below Android 13 notifications need no permission, but the user can still turn them off.
@@ -48,24 +52,67 @@ internal class AndroidPermissionPlatform(
     }
 
     override suspend fun request(permissions: List<AppPermission>) {
-        // A permission refused for good is launched too: the system answers at once without a
-        // dialog, and a dialog the user dismissed without answering is shown again.
-        val names = permissions
-            .mapNotNull { it.manifestPermission() }
-            .filterNot(::isGranted)
-        if (names.isEmpty()) {
+        // A permission refused for good is launched too: the system answers at once, without a
+        // dialog — which is how that is told apart from a dialog the user dismissed.
+        val asked = permissions.filter { permission ->
+            permission.manifestPermission()?.let { !isGranted(it) } == true
+        }
+        if (asked.isEmpty()) {
             return
         }
-        ledger.markRequested(names)
-        launch(names.toTypedArray())
+        val before = asked.associateWith(::peek)
+        val isDialogShown = pausesDuring { launch(asked.mapNotNull { it.manifestPermission() }.toTypedArray()) }
+        ledger.setRefused(
+            asked.associate { permission ->
+                val name = checkNotNull(permission.manifestPermission())
+                name to isRefusedAfterRequest(
+                    granted = isGranted(name),
+                    shouldShowRationale = shouldShowRationale(name),
+                    isDialogShown = isDialogShown,
+                    before = before.getValue(permission),
+                )
+            },
+        )
     }
 
-    override fun openSettings() {
+    /**
+     * Runs [block] and says whether the system showed its dialog: the dialog is an activity of its
+     * own, so the host pauses — but it also pauses, briefly, when the system answers by itself, so
+     * the pause must last (see [isDialogShown]). Without a lifecycle to watch, a dialog is assumed.
+     */
+    private suspend fun pausesDuring(block: suspend () -> Unit): Boolean {
+        val lifecycle = (activity as? LifecycleOwner)?.lifecycle
+        var hasPaused = lifecycle == null
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                hasPaused = true
+            }
+        }
+        lifecycle?.addObserver(observer)
+        val started = TimeSource.Monotonic.markNow()
+        try {
+            block()
+        } finally {
+            lifecycle?.removeObserver(observer)
+        }
+        return isDialogShown(hasPaused = hasPaused, elapsed = started.elapsedNow())
+    }
+
+    /**
+     * The user may set a refused permission back to "Ask every time" there: forget the refusal. If it
+     * still stands, the next request comes back without a dialog and records it again.
+     */
+    override fun openSettings(permissions: List<AppPermission>) {
+        ledger.setRefused(permissions.mapNotNull { it.manifestPermission() }.associateWith { false })
         val intent = Intent(
             Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
             Uri.fromParts("package", context.packageName, null),
         ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
+    }
+
+    private fun shouldShowRationale(manifestPermission: String): Boolean {
+        return activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, manifestPermission) } == true
     }
 
     private fun isGranted(manifestPermission: String): Boolean {
@@ -96,18 +143,51 @@ internal fun AppPermission.manifestPermission(sdk: Int = Build.VERSION.SDK_INT):
 }
 
 /**
- * Android answers "granted" and "show a rationale"; "refused for good" and "never asked" look the
- * same — both no and no — so whether this app asked before decides between them.
+ * Android answers "granted" and "show a rationale". "Refused for good" looks like "never asked", a
+ * lapsed one-time grant and "Ask every time" — none granted, no rationale — so the ledger's record of
+ * a refusal decides; everything else can still be asked.
  */
 internal fun androidPermissionStatus(
     granted: Boolean,
     shouldShowRationale: Boolean,
-    requestedBefore: Boolean,
+    isRefused: Boolean,
 ): PermissionStatus {
     return when {
         granted -> PermissionStatus.Granted
         shouldShowRationale -> PermissionStatus.ShouldShowRationale
-        requestedBefore -> PermissionStatus.Denied
+        isRefused -> PermissionStatus.Denied
         else -> PermissionStatus.NotDetermined
+    }
+}
+
+/** Answered without a dialog, the system is back in about a tenth of a second; no person answers that fast. */
+private val FASTEST_ANSWER = 300.milliseconds
+
+/**
+ * Whether a request showed the system dialog: the host paused, and for longer than the system takes
+ * to answer by itself (measured ~115 ms on Android 15) — a person needs well over [FASTEST_ANSWER].
+ */
+internal fun isDialogShown(
+    hasPaused: Boolean,
+    elapsed: Duration,
+): Boolean {
+    return hasPaused && elapsed >= FASTEST_ANSWER
+}
+
+/**
+ * Whether the system stopped asking, from how a request ended. No dialog at all means it answered by
+ * itself: refused for good. A refusal in the dialog without a rationale afterwards is final only when
+ * the user had refused before (Android's second refusal); after a first dialog it was a dismissal.
+ */
+internal fun isRefusedAfterRequest(
+    granted: Boolean,
+    shouldShowRationale: Boolean,
+    isDialogShown: Boolean,
+    before: PermissionStatus,
+): Boolean {
+    return when {
+        granted || shouldShowRationale -> false
+        !isDialogShown -> true
+        else -> before == PermissionStatus.ShouldShowRationale || before == PermissionStatus.Denied
     }
 }

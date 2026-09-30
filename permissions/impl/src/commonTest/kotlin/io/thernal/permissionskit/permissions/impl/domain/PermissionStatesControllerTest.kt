@@ -33,7 +33,7 @@ private class FakePlatform(
         permissions.forEach { current[it] = answer(it) }
     }
 
-    override fun openSettings() {
+    override fun openSettings(permissions: List<AppPermission>) {
         settingsOpened++
     }
 }

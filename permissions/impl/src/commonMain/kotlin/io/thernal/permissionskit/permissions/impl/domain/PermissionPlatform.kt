@@ -20,5 +20,6 @@ internal interface PermissionPlatform {
      */
     suspend fun request(permissions: List<AppPermission>)
 
-    fun openSettings()
+    /** Opens the app's settings, where the user may change [permissions]. */
+    fun openSettings(permissions: List<AppPermission>)
 }
