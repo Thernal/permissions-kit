@@ -65,11 +65,11 @@ In a Compose UI test install it with `LocalPermissionStateProvider provides fake
 ## Adding a permission
 
 1. `AppPermission` (`api`): the entry, with a KDoc line on what it unlocks.
-2. `AppPermission.manifestPermission()` (`impl/androidMain`): the manifest string, or `null` when the
+2. `AppPermission.manifestPermissions()` (`impl/androidMain`): the manifest strings, empty when the
    Android version asks for none.
 3. `IosPermissionPlatform` (`impl/iosMain`): `peek` (the status now) and `requestOne` (the prompt), plus a
    status mapping beside `avStatus`/`photoStatus`, with a test in `iosTest`.
 4. The app's manifest entry and `Info.plist` usage description.
 
-The compiler flags each `when` that misses the new entry. Location needs a `CLLocationManager` delegate kept
-alive until the user answers — see the kit's `docs/todos/location-and-contacts.md`.
+The compiler flags each `when` that misses the new entry. A framework that answers only through a delegate
+(as Core Location does) needs it kept alive past the prompt — `LocationAuthorization` is the example.

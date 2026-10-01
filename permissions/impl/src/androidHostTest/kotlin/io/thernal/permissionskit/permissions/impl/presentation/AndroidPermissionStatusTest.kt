@@ -6,7 +6,6 @@ import io.thernal.permissionskit.permissions.api.domain.PermissionStatus
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -114,14 +113,34 @@ class AndroidPermissionStatusTest {
 
     @Test
     fun `notifications ask for a permission from Android 13`() {
-        assertEquals(Manifest.permission.POST_NOTIFICATIONS, AppPermission.Notification.manifestPermission(sdk = 33))
-        assertNull(AppPermission.Notification.manifestPermission(sdk = 32))
+        assertEquals(
+            listOf(Manifest.permission.POST_NOTIFICATIONS),
+            AppPermission.Notification.manifestPermissions(sdk = 33),
+        )
+        assertTrue(AppPermission.Notification.manifestPermissions(sdk = 32).isEmpty())
     }
 
     @Test
     fun `the photo library never asks and the camera and microphone always do`() {
-        assertNull(AppPermission.PhotoLibrary.manifestPermission(sdk = 36))
-        assertEquals(Manifest.permission.CAMERA, AppPermission.Camera.manifestPermission(sdk = 24))
-        assertEquals(Manifest.permission.RECORD_AUDIO, AppPermission.Microphone.manifestPermission(sdk = 24))
+        assertTrue(AppPermission.PhotoLibrary.manifestPermissions(sdk = 36).isEmpty())
+        assertEquals(listOf(Manifest.permission.CAMERA), AppPermission.Camera.manifestPermissions(sdk = 24))
+        assertEquals(listOf(Manifest.permission.RECORD_AUDIO), AppPermission.Microphone.manifestPermissions(sdk = 24))
+    }
+
+    @Test
+    fun `location offers both accuracies in one dialog`() {
+        assertEquals(
+            listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+            AppPermission.Location.manifestPermissions(sdk = 24),
+        )
+    }
+
+    @Test
+    fun `background location asks from Android 10 and is covered by the foreground grant below`() {
+        assertEquals(
+            listOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
+            AppPermission.BackgroundLocation.manifestPermissions(sdk = 29),
+        )
+        assertTrue(AppPermission.BackgroundLocation.manifestPermissions(sdk = 28).isEmpty())
     }
 }

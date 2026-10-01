@@ -24,6 +24,10 @@
 	<string>1</string>
 	<key>NSCameraUsageDescription</key>
 	<string>The sample shows how the camera permission is requested.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>The sample shows how the background location permission is requested.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>The sample shows how the location permission is requested.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>The sample shows how the microphone permission is requested.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

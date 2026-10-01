@@ -47,12 +47,17 @@ registry) — `setContent { App(graph) }` is.
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 <uses-feature android:name="android.hardware.camera" android:required="false" />
 <uses-feature android:name="android.hardware.microphone" android:required="false" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />  <!-- BackgroundLocation only -->
 ```
 
 ```xml
 <key>NSCameraUsageDescription</key><string>…why the app needs the camera…</string>
 <key>NSMicrophoneUsageDescription</key><string>…</string>
 <key>NSPhotoLibraryUsageDescription</key><string>…</string>
+<key>NSLocationWhenInUseUsageDescription</key><string>…</string>
+<key>NSLocationAlwaysAndWhenInUseUsageDescription</key><string>…</string>  <!-- BackgroundLocation only -->
 ```
 
 Only for the permissions the app uses. The kit's `sample/` has both files complete.

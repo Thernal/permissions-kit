@@ -1,6 +1,6 @@
 ---
 name: permissions-kit
-description: Writes, reviews and debugs runtime-permission code in Compose Multiplatform apps that use permissions-kit (packages io.thernal.permissionskit.permissions.*; rememberPermissionState, PermissionState, MultiPermissionState, AppPermission, PermissionStatus, isGranted, canRequest, openSettings, LocalPermissionStateProvider, FakePermissionStateProvider, PermissionsWiring). Use it for any permission work in such a project, even when the kit is not named - asking for the camera, microphone, photos or notifications, a rationale or "open settings" screen, asking on first launch, permission-gated previews and tests, a missing usage description or manifest entry, or adding a new permission. Not for projects without permissions-kit.
+description: Writes, reviews and debugs runtime-permission code in Compose Multiplatform apps that use permissions-kit (packages io.thernal.permissionskit.permissions.*; rememberPermissionState, PermissionState, MultiPermissionState, AppPermission, PermissionStatus, isGranted, canRequest, openSettings, LocalPermissionStateProvider, FakePermissionStateProvider, PermissionsWiring). Use it for any permission work in such a project, even when the kit is not named - asking for the camera, microphone, photos, notifications or location (foreground or "Always"), a rationale or "open settings" screen, asking on first launch, permission-gated previews and tests, a missing usage description or manifest entry, or adding a new permission. Not for projects without permissions-kit.
 ---
 
 # permissions-kit
@@ -50,6 +50,9 @@ edits.
   app on a request without one.
 - Handle every status: a screen stuck on `Denied` with a "Request" button that does nothing is a bug —
   offer `openSettings`.
+- `BackgroundLocation` is asked through its own state: `request()` takes the foreground grant first, then
+  the upgrade (Android 11+: a settings page). Never request `ACCESS_BACKGROUND_LOCATION` or
+  `requestAlwaysAuthorization` by hand.
 - Ask in context (when the user taps the feature), not all at once at start — except notifications, where
   first launch is usual.
 - In tests and previews use `FakePermissionStateProvider`; never mock platform classes.

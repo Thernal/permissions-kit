@@ -70,6 +70,27 @@ own entry.
 iOS limited photo access is its own status, `Limited`, which `isGranted` accepts: the feature works, and a
 screen can offer "Select more photos". ArenaGo and Act2Act reported it as `Granted`.
 
+## Location: foreground first, then "Always"
+
+`Location` is the foreground grant — precise or approximate on Android (either counts), When In Use on iOS.
+`BackgroundLocation` is "Allow all the time" / Always, which both systems grant only on top of it, so
+`request()` takes two steps when the foreground grant is missing: first that, then the upgrade.
+
+- **Android.** Android 11+ refuses background location asked together with anything else, so it is a
+  second launch after the first comes back granted — and from Android 11 that launch opens the system
+  settings page rather than a dialog. Until the foreground grant is in, `BackgroundLocation` reports
+  `Location`'s status, since that is the step to take; below Android 10 the foreground grant covers it.
+  A permission maps to several manifest names here (`ACCESS_FINE_LOCATION` and `ACCESS_COARSE_LOCATION`
+  in one dialog); the refusal ledger records each name.
+- **iOS.** Core Location answers only through a `CLLocationManager` delegate, which the manager holds
+  weakly and which must outlive the prompt: `LocationAuthorization` keeps one of each for the process.
+  A request ends when the status changes or, for an upgrade the user declined, when the app is active
+  again after the alert; no resignation within a second means iOS showed nothing.
+- **The one-time upgrade.** iOS shows "Change to Always Allow" once, and a refusal reads as plain When In
+  Use — indistinguishable from never offered. Whether it was asked is recorded in `NSUserDefaults`, so
+  `BackgroundLocation` is `NotDetermined` until then and `Denied` after it. Allow Once (a temporary When In
+  Use) offers no upgrade, which the record then counts as asked.
+
 ## Notifications below Android 13
 
 No permission exists before Android 13, but the user can still turn notifications off. The status there
@@ -87,5 +108,6 @@ has already answered.
 
 - `allGranted` → `areAllGranted` (the kit's Detekt naming rule); `ImmutableList`/`ImmutableMap` → `List`/`Map`
   (no kotlinx-collections-immutable dependency for callers; the state types are `@Stable` interfaces).
-- `Microphone` is new (D46). `Limited` and `openSettings` are new (D48).
+- `Microphone` is new (D46). `Limited` and `openSettings` are new (D48). `Location` and
+  `BackgroundLocation` are new, ported from DropNote's own module.
 - The provider has one method; the single-permission overload is built on it in `api`.

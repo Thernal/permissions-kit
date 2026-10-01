@@ -67,6 +67,22 @@ if (media.areAllGranted) Recorder() else Button(onClick = media.request) { Text(
 `MultiPermissionState` is `statuses` (one entry per permission, in the given order), `request`,
 `openSettings`, `areAllGranted`. Android shows one dialog for all of them; iOS asks one after another.
 
+## Location in the background
+
+```kotlin
+val always = rememberPermissionState(AppPermission.BackgroundLocation)
+when {
+    always.status.isGranted -> Unit
+    always.status.canRequest -> Button(onClick = always.request) { Text("Allow all the time") }
+    always.status == PermissionStatus.Denied -> Button(onClick = always.openSettings) { Text("Open settings") }
+}
+```
+
+`request()` asks for the foreground grant first when it is missing, then for the background one: two
+prompts in a row, and on Android 11+ the second is a page in the system settings. Explain why before the
+button — both systems show the upgrade once. Until the foreground grant is in, the status is that of
+`Location`.
+
 ## Settings
 
 `openSettings()` opens this app's page in the system settings. Statuses are re-read when the app comes
@@ -82,6 +98,8 @@ Only the application can declare these, and a request without them fails:
 | `Microphone` | `android.permission.RECORD_AUDIO` (+ `uses-feature` `android.hardware.microphone`, not required) | `NSMicrophoneUsageDescription` |
 | `PhotoLibrary` | nothing — use the Photo Picker (`PickVisualMedia`) | `NSPhotoLibraryUsageDescription` |
 | `Notification` | `android.permission.POST_NOTIFICATIONS` | nothing (push also needs the capability) |
+| `Location` | `android.permission.ACCESS_FINE_LOCATION` and `ACCESS_COARSE_LOCATION` | `NSLocationWhenInUseUsageDescription` |
+| `BackgroundLocation` | the two above and `android.permission.ACCESS_BACKGROUND_LOCATION` | `NSLocationWhenInUseUsageDescription` and `NSLocationAlwaysAndWhenInUseUsageDescription` |
 
 ## Installing the provider
 
@@ -124,7 +142,7 @@ assertEquals(PermissionStatus.Denied, fake.status(AppPermission.Camera))
 ## Adding a permission
 
 1. An entry in `AppPermission` (`api`).
-2. Its manifest permission in `AppPermission.manifestPermission()` (`impl/androidMain`) — `null` when the
+2. Its manifest permissions in `AppPermission.manifestPermissions()` (`impl/androidMain`) — empty when the
    Android version asks for none.
 3. Its status and request in `IosPermissionPlatform.peek` / `requestOne` (`impl/iosMain`), and a mapping
    of the framework's status next to `avStatus`/`photoStatus`.

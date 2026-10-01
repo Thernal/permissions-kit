@@ -28,12 +28,17 @@ internal class AndroidPermissionPlatform(
     private val launch: suspend (Array<String>) -> Unit,
 ) : PermissionPlatform {
     override fun peek(permission: AppPermission): PermissionStatus {
-        val manifestPermission = permission.manifestPermission()
+        // Android asks for "all the time" only on top of the foreground grant: until that is in, it is the
+        // step to take, and below Android 10 it is the whole of it.
+        if (permission == AppPermission.BackgroundLocation && !isGranted(AppPermission.Location)) {
+            return peek(AppPermission.Location)
+        }
+        val names = permission.manifestPermissions()
         return when {
-            manifestPermission != null -> androidPermissionStatus(
-                granted = isGranted(manifestPermission),
-                shouldShowRationale = shouldShowRationale(manifestPermission),
-                isRefused = ledger.isRefused(manifestPermission),
+            names.isNotEmpty() -> androidPermissionStatus(
+                granted = names.any(::isGranted),
+                shouldShowRationale = names.any(::shouldShowRationale),
+                isRefused = names.all(ledger::isRefused),
             )
 
             // Below Android 13 notifications need no permission, but the user can still turn them off.
@@ -51,25 +56,41 @@ internal class AndroidPermissionPlatform(
         return peek(permission)
     }
 
+    /**
+     * Two rounds: background location is asked only once the foreground grant is in, and Android 11+
+     * refuses it when asked together with anything else.
+     */
     override suspend fun request(permissions: List<AppPermission>) {
-        // A permission refused for good is launched too: the system answers at once, without a
-        // dialog — which is how that is told apart from a dialog the user dismissed.
-        val asked = permissions.filter { permission ->
-            permission.manifestPermission()?.let { !isGranted(it) } == true
+        val firstRound = permissions.flatMap { permission ->
+            if (permission == AppPermission.BackgroundLocation) {
+                AppPermission.Location.manifestPermissions()
+            } else {
+                permission.manifestPermissions()
+            }
         }
-        if (asked.isEmpty()) {
+        launchRound(firstRound.distinct().filterNot(::isGranted))
+        if (AppPermission.BackgroundLocation in permissions && isGranted(AppPermission.Location)) {
+            launchRound(AppPermission.BackgroundLocation.manifestPermissions().filterNot(::isGranted))
+        }
+    }
+
+    /**
+     * One system dialog for [names]. A permission refused for good is launched too: the system answers at
+     * once, without a dialog — which is how that is told apart from a dialog the user dismissed.
+     */
+    private suspend fun launchRound(names: List<String>) {
+        if (names.isEmpty()) {
             return
         }
-        val before = asked.associateWith(::peek)
-        val isDialogShown = pausesDuring { launch(asked.mapNotNull { it.manifestPermission() }.toTypedArray()) }
+        val before = names.associateWith(::nameStatus)
+        val isDialogShown = pausesDuring { launch(names.toTypedArray()) }
         ledger.setRefused(
-            asked.associate { permission ->
-                val name = checkNotNull(permission.manifestPermission())
-                name to isRefusedAfterRequest(
+            names.associateWith { name ->
+                isRefusedAfterRequest(
                     granted = isGranted(name),
                     shouldShowRationale = shouldShowRationale(name),
                     isDialogShown = isDialogShown,
-                    before = before.getValue(permission),
+                    before = before.getValue(name),
                 )
             },
         )
@@ -103,12 +124,32 @@ internal class AndroidPermissionPlatform(
      * still stands, the next request comes back without a dialog and records it again.
      */
     override fun openSettings(permissions: List<AppPermission>) {
-        ledger.setRefused(permissions.mapNotNull { it.manifestPermission() }.associateWith { false })
+        val names = permissions.flatMap { permission ->
+            if (permission == AppPermission.BackgroundLocation) {
+                AppPermission.Location.manifestPermissions() + permission.manifestPermissions()
+            } else {
+                permission.manifestPermissions()
+            }
+        }
+        ledger.setRefused(names.associateWith { false })
         val intent = Intent(
             Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
             Uri.fromParts("package", context.packageName, null),
         ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
+    }
+
+    private fun nameStatus(manifestPermission: String): PermissionStatus {
+        return androidPermissionStatus(
+            granted = isGranted(manifestPermission),
+            shouldShowRationale = shouldShowRationale(manifestPermission),
+            isRefused = ledger.isRefused(manifestPermission),
+        )
+    }
+
+    /** Location counts as granted with either accuracy: approximate is the user's choice to make. */
+    private fun isGranted(permission: AppPermission): Boolean {
+        return permission.manifestPermissions().any(::isGranted)
     }
 
     private fun shouldShowRationale(manifestPermission: String): Boolean {
@@ -124,21 +165,37 @@ internal class AndroidPermissionPlatform(
     }
 }
 
-/** The manifest permission behind [this], or `null` where this Android version asks for none. */
-internal fun AppPermission.manifestPermission(sdk: Int = Build.VERSION.SDK_INT): String? {
+/**
+ * The manifest permissions behind [this] — one dialog asks for all of them — or none where this Android
+ * version asks for nothing.
+ */
+internal fun AppPermission.manifestPermissions(sdk: Int = Build.VERSION.SDK_INT): List<String> {
     return when (this) {
-        AppPermission.Camera -> Manifest.permission.CAMERA
+        AppPermission.Camera -> listOf(Manifest.permission.CAMERA)
 
-        AppPermission.Microphone -> Manifest.permission.RECORD_AUDIO
+        AppPermission.Microphone -> listOf(Manifest.permission.RECORD_AUDIO)
 
         AppPermission.Notification -> if (sdk >= Build.VERSION_CODES.TIRAMISU) {
-            Manifest.permission.POST_NOTIFICATIONS
+            listOf(Manifest.permission.POST_NOTIFICATIONS)
         } else {
-            null
+            emptyList()
         }
 
         // The system Photo Picker needs no permission, and Play restricts READ_MEDIA_*.
-        AppPermission.PhotoLibrary -> null
+        AppPermission.PhotoLibrary -> emptyList()
+
+        // Both, so the dialog offers the choice between precise and approximate.
+        AppPermission.Location -> listOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+        )
+
+        // Below Android 10 the foreground grant covers the background.
+        AppPermission.BackgroundLocation -> if (sdk >= Build.VERSION_CODES.Q) {
+            listOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+        } else {
+            emptyList()
+        }
     }
 }
 

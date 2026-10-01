@@ -26,6 +26,8 @@ targets:
         NSCameraUsageDescription: The sample shows how the camera permission is requested.
         NSMicrophoneUsageDescription: The sample shows how the microphone permission is requested.
         NSPhotoLibraryUsageDescription: The sample shows how the photo library permission is requested.
+        NSLocationWhenInUseUsageDescription: The sample shows how the location permission is requested.
+        NSLocationAlwaysAndWhenInUseUsageDescription: The sample shows how the background location permission is requested.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.thernal.permissionskit.sample

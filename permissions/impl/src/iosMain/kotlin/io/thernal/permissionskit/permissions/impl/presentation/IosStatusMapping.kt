@@ -5,6 +5,11 @@ import platform.AVFoundation.AVAuthorizationStatus
 import platform.AVFoundation.AVAuthorizationStatusAuthorized
 import platform.AVFoundation.AVAuthorizationStatusDenied
 import platform.AVFoundation.AVAuthorizationStatusRestricted
+import platform.CoreLocation.CLAuthorizationStatus
+import platform.CoreLocation.kCLAuthorizationStatusAuthorizedAlways
+import platform.CoreLocation.kCLAuthorizationStatusAuthorizedWhenInUse
+import platform.CoreLocation.kCLAuthorizationStatusDenied
+import platform.CoreLocation.kCLAuthorizationStatusRestricted
 import platform.Photos.PHAuthorizationStatus
 import platform.Photos.PHAuthorizationStatusAuthorized
 import platform.Photos.PHAuthorizationStatusDenied
@@ -44,6 +49,32 @@ internal fun notificationStatus(status: UNAuthorizationStatus): PermissionStatus
         -> PermissionStatus.Granted
 
         UNAuthorizationStatusDenied -> PermissionStatus.Denied
+
+        else -> PermissionStatus.NotDetermined
+    }
+}
+
+/**
+ * [isAlways]: the background permission, for which When In Use is the step before — still to be asked
+ * until the one-time upgrade prompt has been ([isUpgradeAsked]), refused after it.
+ */
+internal fun locationStatus(
+    status: CLAuthorizationStatus,
+    isAlways: Boolean,
+    isUpgradeAsked: Boolean,
+): PermissionStatus {
+    return when (status) {
+        kCLAuthorizationStatusAuthorizedAlways -> PermissionStatus.Granted
+
+        kCLAuthorizationStatusAuthorizedWhenInUse -> when {
+            !isAlways -> PermissionStatus.Granted
+            isUpgradeAsked -> PermissionStatus.Denied
+            else -> PermissionStatus.NotDetermined
+        }
+
+        kCLAuthorizationStatusDenied -> PermissionStatus.Denied
+
+        kCLAuthorizationStatusRestricted -> PermissionStatus.Restricted
 
         else -> PermissionStatus.NotDetermined
     }

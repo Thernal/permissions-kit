@@ -2,7 +2,7 @@
 
 Runtime permissions for a Compose Multiplatform app (android, iosArm64, iosSimulatorArm64): one composable
 call reads a permission's status, asks for it, and sends the user to settings once it is refused — on
-Android through the activity-result launcher, on iOS through AVFoundation, Photos and UserNotifications.
+Android through the activity-result launcher, on iOS through AVFoundation, Photos, UserNotifications and Core Location.
 
 ```kotlin
 @Composable

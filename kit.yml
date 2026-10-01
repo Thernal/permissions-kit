@@ -46,6 +46,6 @@ requires:
   - catalog kotlinx-coroutines-core, kotlinx-coroutines-test (kotlinx-coroutines = 1.11.0), kotlin-test
   - catalog metro-runtime, plugin metro (metro = 1.4.2)
   - graph the app graph exposes Set<ProvidedValue<*>> and the root installs it with CompositionLocalProvider (arch-kit's ComponentLocals does)
-  - android the root composes inside a ComponentActivity; the manifest declares CAMERA, RECORD_AUDIO, POST_NOTIFICATIONS for the permissions used
-  - ios Info.plist carries NSCameraUsageDescription, NSMicrophoneUsageDescription, NSPhotoLibraryUsageDescription for the permissions used
+  - android the root composes inside a ComponentActivity; the manifest declares CAMERA, RECORD_AUDIO, POST_NOTIFICATIONS, ACCESS_FINE_LOCATION + ACCESS_COARSE_LOCATION, ACCESS_BACKGROUND_LOCATION for the permissions used
+  - ios Info.plist carries NSCameraUsageDescription, NSMicrophoneUsageDescription, NSPhotoLibraryUsageDescription, NSLocationWhenInUseUsageDescription, NSLocationAlwaysAndWhenInUseUsageDescription for the permissions used
   - settings enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS"), and each code part included as a module

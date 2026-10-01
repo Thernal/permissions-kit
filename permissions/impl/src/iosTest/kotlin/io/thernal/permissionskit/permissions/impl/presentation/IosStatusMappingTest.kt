@@ -5,6 +5,11 @@ import platform.AVFoundation.AVAuthorizationStatusAuthorized
 import platform.AVFoundation.AVAuthorizationStatusDenied
 import platform.AVFoundation.AVAuthorizationStatusNotDetermined
 import platform.AVFoundation.AVAuthorizationStatusRestricted
+import platform.CoreLocation.kCLAuthorizationStatusAuthorizedAlways
+import platform.CoreLocation.kCLAuthorizationStatusAuthorizedWhenInUse
+import platform.CoreLocation.kCLAuthorizationStatusDenied
+import platform.CoreLocation.kCLAuthorizationStatusNotDetermined
+import platform.CoreLocation.kCLAuthorizationStatusRestricted
 import platform.Photos.PHAuthorizationStatusAuthorized
 import platform.Photos.PHAuthorizationStatusDenied
 import platform.Photos.PHAuthorizationStatusLimited
@@ -43,5 +48,55 @@ class IosStatusMappingTest {
         assertEquals(PermissionStatus.Granted, notificationStatus(UNAuthorizationStatusEphemeral))
         assertEquals(PermissionStatus.Denied, notificationStatus(UNAuthorizationStatusDenied))
         assertEquals(PermissionStatus.NotDetermined, notificationStatus(UNAuthorizationStatusNotDetermined))
+    }
+
+    @Test
+    fun `when in use grants the foreground location whatever was asked`() {
+        assertEquals(
+            PermissionStatus.Granted,
+            locationStatus(status = kCLAuthorizationStatusAuthorizedWhenInUse, isAlways = false, isUpgradeAsked = true),
+        )
+    }
+
+    @Test
+    fun `when in use leaves always to ask until the upgrade prompt was used`() {
+        assertEquals(
+            PermissionStatus.NotDetermined,
+            locationStatus(status = kCLAuthorizationStatusAuthorizedWhenInUse, isAlways = true, isUpgradeAsked = false),
+        )
+        assertEquals(
+            PermissionStatus.Denied,
+            locationStatus(status = kCLAuthorizationStatusAuthorizedWhenInUse, isAlways = true, isUpgradeAsked = true),
+        )
+    }
+
+    @Test
+    fun `the other location statuses mean the same for both permissions`() {
+        listOf(true, false).forEach { isAlways ->
+            assertEquals(
+                PermissionStatus.Granted,
+                locationStatus(
+                    status = kCLAuthorizationStatusAuthorizedAlways,
+                    isAlways = isAlways,
+                    isUpgradeAsked = false,
+                ),
+            )
+            assertEquals(
+                PermissionStatus.Denied,
+                locationStatus(status = kCLAuthorizationStatusDenied, isAlways = isAlways, isUpgradeAsked = false),
+            )
+            assertEquals(
+                PermissionStatus.Restricted,
+                locationStatus(status = kCLAuthorizationStatusRestricted, isAlways = isAlways, isUpgradeAsked = false),
+            )
+            assertEquals(
+                PermissionStatus.NotDetermined,
+                locationStatus(
+                    status = kCLAuthorizationStatusNotDetermined,
+                    isAlways = isAlways,
+                    isUpgradeAsked = false,
+                ),
+            )
+        }
     }
 }

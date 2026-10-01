@@ -77,7 +77,15 @@ class PermissionStatesControllerTest {
                 AppPermission.PhotoLibrary to PermissionStatus.Limited,
                 AppPermission.Notification to PermissionStatus.ShouldShowRationale,
             )
-            val controller = PermissionStatesController(platform, AppPermission.entries)
+            val controller = PermissionStatesController(
+                platform = platform,
+                permissions = listOf(
+                    AppPermission.Camera,
+                    AppPermission.Microphone,
+                    AppPermission.PhotoLibrary,
+                    AppPermission.Notification,
+                ),
+            )
 
             controller.request()
 
