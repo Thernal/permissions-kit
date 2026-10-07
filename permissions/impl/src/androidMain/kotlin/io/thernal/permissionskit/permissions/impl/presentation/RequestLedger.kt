@@ -26,9 +26,7 @@ internal class RequestLedger(context: Context) {
         }
         editor.apply()
     }
-
-    private companion object {
-        // A new file: the earlier "requested" record meant something else and must not be read as this.
-        const val FILE_NAME = "io.thernal.permissionskit.permissions.refused"
-    }
 }
+
+// A new file: the earlier "requested" record meant something else and must not be read as this.
+private const val FILE_NAME = "io.thernal.permissionskit.permissions.refused"

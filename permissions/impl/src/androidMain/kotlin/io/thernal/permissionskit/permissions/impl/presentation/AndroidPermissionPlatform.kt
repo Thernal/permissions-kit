@@ -1,12 +1,10 @@
 package io.thernal.permissionskit.permissions.impl.presentation
 
-import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
@@ -14,8 +12,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
 import io.thernal.permissionskit.permissions.api.domain.AppPermission
 import io.thernal.permissionskit.permissions.api.domain.PermissionStatus
@@ -162,89 +158,5 @@ internal class AndroidPermissionPlatform(
 
     private fun notificationsEnabled(): Boolean {
         return NotificationManagerCompat.from(context).areNotificationsEnabled()
-    }
-}
-
-/**
- * The manifest permissions behind [this] — one dialog asks for all of them — or none where this Android
- * version asks for nothing.
- */
-internal fun AppPermission.manifestPermissions(sdk: Int = Build.VERSION.SDK_INT): List<String> {
-    return when (this) {
-        AppPermission.Camera -> listOf(Manifest.permission.CAMERA)
-
-        AppPermission.Microphone -> listOf(Manifest.permission.RECORD_AUDIO)
-
-        AppPermission.Notification -> if (sdk >= Build.VERSION_CODES.TIRAMISU) {
-            listOf(Manifest.permission.POST_NOTIFICATIONS)
-        } else {
-            emptyList()
-        }
-
-        // The system Photo Picker needs no permission, and Play restricts READ_MEDIA_*.
-        AppPermission.PhotoLibrary -> emptyList()
-
-        // Both, so the dialog offers the choice between precise and approximate.
-        AppPermission.Location -> listOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-        )
-
-        // Below Android 10 the foreground grant covers the background.
-        AppPermission.BackgroundLocation -> if (sdk >= Build.VERSION_CODES.Q) {
-            listOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-        } else {
-            emptyList()
-        }
-    }
-}
-
-/**
- * Android answers "granted" and "show a rationale". "Refused for good" looks like "never asked", a
- * lapsed one-time grant and "Ask every time" — none granted, no rationale — so the ledger's record of
- * a refusal decides; everything else can still be asked.
- */
-internal fun androidPermissionStatus(
-    granted: Boolean,
-    shouldShowRationale: Boolean,
-    isRefused: Boolean,
-): PermissionStatus {
-    return when {
-        granted -> PermissionStatus.Granted
-        shouldShowRationale -> PermissionStatus.ShouldShowRationale
-        isRefused -> PermissionStatus.Denied
-        else -> PermissionStatus.NotDetermined
-    }
-}
-
-/** Answered without a dialog, the system is back in about a tenth of a second; no person answers that fast. */
-private val FASTEST_ANSWER = 300.milliseconds
-
-/**
- * Whether a request showed the system dialog: the host paused, and for longer than the system takes
- * to answer by itself (measured ~115 ms on Android 15) — a person needs well over [FASTEST_ANSWER].
- */
-internal fun isDialogShown(
-    hasPaused: Boolean,
-    elapsed: Duration,
-): Boolean {
-    return hasPaused && elapsed >= FASTEST_ANSWER
-}
-
-/**
- * Whether the system stopped asking, from how a request ended. No dialog at all means it answered by
- * itself: refused for good. A refusal in the dialog without a rationale afterwards is final only when
- * the user had refused before (Android's second refusal); after a first dialog it was a dismissal.
- */
-internal fun isRefusedAfterRequest(
-    granted: Boolean,
-    shouldShowRationale: Boolean,
-    isDialogShown: Boolean,
-    before: PermissionStatus,
-): Boolean {
-    return when {
-        granted || shouldShowRationale -> false
-        !isDialogShown -> true
-        else -> before == PermissionStatus.ShouldShowRationale || before == PermissionStatus.Denied
     }
 }

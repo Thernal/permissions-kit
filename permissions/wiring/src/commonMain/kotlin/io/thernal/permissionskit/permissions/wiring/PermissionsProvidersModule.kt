@@ -16,7 +16,7 @@ import io.thernal.permissionskit.permissions.impl.presentation.platformPermissio
  */
 @BindingContainer
 @ContributesTo(AppScope::class)
-interface PermissionsWiring {
+interface PermissionsProvidersModule {
     companion object {
         @Provides
         @IntoSet

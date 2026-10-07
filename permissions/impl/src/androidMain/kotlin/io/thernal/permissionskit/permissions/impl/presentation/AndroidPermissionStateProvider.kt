@@ -12,10 +12,6 @@ import io.thernal.permissionskit.permissions.api.domain.AppPermission
 import io.thernal.permissionskit.permissions.api.presentation.MultiPermissionState
 import io.thernal.permissionskit.permissions.api.presentation.PermissionStateProvider
 
-actual fun platformPermissionStateProvider(): PermissionStateProvider {
-    return AndroidPermissionStateProvider
-}
-
 /** One `RequestMultiplePermissions` launcher per call site: every missing permission in one system dialog. */
 internal object AndroidPermissionStateProvider : PermissionStateProvider {
     @Composable

@@ -19,7 +19,7 @@ Without skill-manager, the kit's `README.md` → Installing → *Without it* doe
 
 ## The root
 
-`PermissionsWiring` contributes `LocalPermissionStateProvider provides <platform provider>` into
+`PermissionsProvidersModule` contributes `LocalPermissionStateProvider provides <platform provider>` into
 `Set<ProvidedValue<*>>`. The app graph exposes that set and the root installs it once:
 
 ```kotlin
@@ -34,7 +34,7 @@ fun App(graph: AppGraph) {
 }
 ```
 
-With arch-kit the same set is installed by `ComponentLocals(…)`; nothing extra is needed.
+With arch-kit the same set is installed by `ContributedLocals(…)`; nothing extra is needed.
 
 On Android the root must be inside a `ComponentActivity` (the launcher needs an activity-result
 registry) — `setContent { App(graph) }` is.
