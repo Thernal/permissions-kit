@@ -27,9 +27,6 @@ import kotlin.coroutines.suspendCoroutine
  * handlers run on background queues; resuming the continuation returns to the caller's dispatcher.
  */
 internal object IosPermissionPlatform : PermissionPlatform {
-    private val NOTIFICATION_OPTIONS =
-        UNAuthorizationOptionAlert or UNAuthorizationOptionBadge or UNAuthorizationOptionSound
-
     // The notification status is only available asynchronously; this is the last one read.
     private var lastNotificationStatus: PermissionStatus = PermissionStatus.NotDetermined
 
@@ -125,3 +122,6 @@ internal object IosPermissionPlatform : PermissionPlatform {
         suspendCoroutine { continuation -> ask { continuation.resume(Unit) } }
     }
 }
+
+private val NOTIFICATION_OPTIONS =
+    UNAuthorizationOptionAlert or UNAuthorizationOptionBadge or UNAuthorizationOptionSound

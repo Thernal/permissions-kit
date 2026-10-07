@@ -111,10 +111,8 @@ internal class LocationAuthorization {
             observers.forEach { center.removeObserver(it) }
         }
     }
-
-    private companion object {
-        const val UPGRADE_ASKED_KEY = "io.thernal.permissionskit.permissions.locationUpgradeAsked"
-        val PROMPT_APPEARS = 1.seconds
-        val ANSWER_SETTLES = 500.milliseconds
-    }
 }
+
+private const val UPGRADE_ASKED_KEY = "io.thernal.permissionskit.permissions.locationUpgradeAsked"
+private val PROMPT_APPEARS = 1.seconds
+private val ANSWER_SETTLES = 500.milliseconds

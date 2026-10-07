@@ -1,6 +1,6 @@
 ---
 name: permissions-kit
-description: Writes, reviews and debugs runtime-permission code in Compose Multiplatform apps that use permissions-kit (packages io.thernal.permissionskit.permissions.*; rememberPermissionState, PermissionState, MultiPermissionState, AppPermission, PermissionStatus, isGranted, canRequest, openSettings, LocalPermissionStateProvider, FakePermissionStateProvider, PermissionsWiring). Use it for any permission work in such a project, even when the kit is not named - asking for the camera, microphone, photos, notifications or location (foreground or "Always"), a rationale or "open settings" screen, asking on first launch, permission-gated previews and tests, a missing usage description or manifest entry, or adding a new permission. Not for projects without permissions-kit.
+description: Writes, reviews and debugs runtime-permission code in Compose Multiplatform apps that use permissions-kit (packages io.thernal.permissionskit.permissions.*; rememberPermissionState, PermissionState, MultiPermissionState, AppPermission, PermissionStatus, isGranted, canRequest, openSettings, LocalPermissionStateProvider, FakePermissionStateProvider, PermissionsProvidersModule). Use it for any permission work in such a project, even when the kit is not named - asking for the camera, microphone, photos, notifications or location (foreground or "Always"), a rationale or "open settings" screen, asking on first launch, permission-gated previews and tests, a missing usage description or manifest entry, or adding a new permission. Not for projects without permissions-kit.
 ---
 
 # permissions-kit
@@ -13,7 +13,7 @@ https://github.com/Thernal/permissions-kit — `permissions/api/README.md`, `per
 
 ```sh
 grep -rn --include=*.kt -e "rememberPermissionState(" . | head     # existing call sites — copy their shape
-grep -rn --include=*.kt -e "PermissionsWiring" -e "compositionLocals" . # is the provider installed at the root?
+grep -rn --include=*.kt -e "PermissionsProvidersModule" -e "compositionLocals" . # is the provider installed at the root?
 grep -rn -e "uses-permission" --include=AndroidManifest.xml .
 grep -rn -e "UsageDescription" --include=Info.plist .
 ```
